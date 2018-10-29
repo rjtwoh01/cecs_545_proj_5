@@ -1,0 +1,31 @@
+﻿<Window x:Class="TravelingSalesPerson.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:TravelingSalesPerson"
+        mc:Ignorable="d"
+        Title="Traveling Sales Person" Height="466.598" Width="852.561">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition/>
+            <ColumnDefinition Width="0*"/>
+        </Grid.ColumnDefinitions>
+        <Button x:Name="btnFileUpload" Content="Select TSP File" HorizontalAlignment="Left" Height="31" Margin="10,10,0,0" VerticalAlignment="Top" Width="111" Click="btnFileUpload_Click"/>
+        <Button x:Name="btnSolve" Content="Solve" HorizontalAlignment="Left" Height="31" Margin="244,10,0,0" VerticalAlignment="Top" Width="111" Click="btnSolve_Click"/>
+        <Label x:Name="lblRunTime" Content="" HorizontalAlignment="Left" Margin="394,10,0,0" VerticalAlignment="Top" Width="420" Height="47"/>        
+        <Grid x:Name="mainGrid" HorizontalAlignment="Left" Height="364" Margin="10,62,0,0" VerticalAlignment="Top" Width="825"/>
+        <Button x:Name="btnSelectTSPType" Content="Select Type" HorizontalAlignment="Left" Height="31" Margin="127,10,0,0" VerticalAlignment="Top" Width="111" Click="btnSelectTSPType_Click">
+            <Button.ContextMenu>
+                <ContextMenu >
+                    <MenuItem Header="Brute Force" Click="bruteForceClick"/>
+                    <MenuItem Header="DFS" Click="dfsClick"/>
+                    <MenuItem Header="BFS" Click="bfsClick"/>
+                    <MenuItem Header="Closest Edge Insertion" Click="closestEdgeClick"/>
+                    <MenuItem Header="Genetic Algorithm" Click="geneticAlgorithmClick"/>
+                </ContextMenu>
+            </Button.ContextMenu>
+        </Button>
+
+    </Grid>
+</Window>
