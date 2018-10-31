@@ -147,6 +147,24 @@ namespace TravelingSalesPerson
                     }
                 }
             }
+            else if (type == "geneticAlgorithm")
+            {
+                Polygon polyLine = new Polygon();
+                polyLine.Stroke = Brushes.Black;
+
+                for (int i = 0; i < fastestRoute.Count(); i++)
+                {
+
+                        //(fastestRoute[i], fastestRoute[i + 1]);
+                        Point point = fastestRoute[i];
+                        point.X += tsp.canvasOffset.X + 2;
+                        point.Y += tsp.canvasOffset.Y + 2;
+
+                        polyLine.Points.Add(point);
+
+                }
+                canvas.Children.Insert(0, polyLine);
+            }
             else
             {
                 Polygon polyLine = new Polygon();
@@ -274,7 +292,7 @@ namespace TravelingSalesPerson
             }
         }
 
-        public void solveGeneticAlgorithm(int crossoverPoint, int mutationProbability, int populationSize, int iterations, int trials, bool wocChecked)
+        public void solveGeneticAlgorithm(int mutationProbability, int populationSize, int iterations, int trials, bool wocChecked)
         {
             overallSolutions.Clear();
 
@@ -291,9 +309,9 @@ namespace TravelingSalesPerson
                 // Solve TSP using Genetic Algorithm
                 double shortestPath;
                 if (!wocChecked)
-                    shortestPath = tsp.GeneticAlgorithm(out shortestPoints, crossoverPoint, mutationProbability, populationSize, iterations);
+                    shortestPath = tsp.GeneticAlgorithm(out shortestPoints, mutationProbability, populationSize, iterations);
                 else
-                    shortestPath = tsp.GeneticAlgorithmWOC(out shortestPoints, crossoverPoint, mutationProbability, populationSize, iterations);
+                    shortestPath = tsp.GeneticAlgorithmWOC(out shortestPoints, mutationProbability, populationSize, iterations);
 
                 // Stop stopwatch for calculating Genetic Algorithm execution time
                 sw.Stop();
@@ -304,6 +322,11 @@ namespace TravelingSalesPerson
                 TSPPath solution = new TSPPath(shortestPoints, shortestPath);
                 solution.elapsedTime = elapsedTime;
 
+                //foreach (TSPPoint tSPPoint in shortestPoints)
+                //{
+                //    drawPoints.Add(tSPPoint.point);
+                //}
+
                 overallSolutions.Add(solution);
             }
 
@@ -313,6 +336,7 @@ namespace TravelingSalesPerson
             TSPPath bestSolution = overallSolutions.Min();
             foreach (TSPPoint tSPPoint in bestSolution.points)
             {
+                Debug.WriteLine("Point: {0} - ({1}, {2})", tSPPoint.matrixIndex + 1, tSPPoint.point.X, tSPPoint.point.Y);
                 drawPoints.Add(tSPPoint.point);
             }
 
@@ -322,14 +346,14 @@ namespace TravelingSalesPerson
 
             displayRunTime();
 
-            writeFile(trials, crossoverPoint, mutationProbability);
+            writeFile(populationSize, trials,  mutationProbability);
         }
 
-        public void writeFile(int trials, int crossoverPoint, int mutationProbability)
+        public void writeFile(int populationSize, int trials, int mutationProbability)
         {
             try
             {
-                using (StreamWriter writer = new StreamWriter("C:/temp/genetic_algorithm_trials-" + trials + "_crossover-" + crossoverPoint + "_mutation-" + mutationProbability + ".csv"))
+                using (StreamWriter writer = new StreamWriter("C:/temp/genetic_algorithm_trials-" + trials + "_populationSize-" + populationSize + "_mutation-" + mutationProbability + ".csv"))
                 {
                     writer.WriteLine("Iteration,Fitness,Elapsed Time");
 
@@ -337,7 +361,7 @@ namespace TravelingSalesPerson
 
                     foreach (TSPPath solution in overallSolutions)
                     {
-                        writer.WriteLine(i + "," + solution.Fitness() + "," + solution.elapsedTime.ToString("G"));
+                        writer.WriteLine(i + "," + solution.distance + "," + solution.elapsedTime.ToString("G"));
                         i++;
                     }
                 }

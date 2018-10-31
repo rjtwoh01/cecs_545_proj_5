@@ -60,6 +60,11 @@ namespace TravelingSalesPerson
 
             this.shortestDistance = 0;
             this.GenerateMatrix();
+
+            foreach(TSPPoint point in tspPoints)
+            {
+                Debug.WriteLine("Point: {0} - ({1}, {2})", point.matrixIndex + 1, point.point.X, point.point.Y);
+            }
         }
 
         private void GenerateMatrix()
@@ -471,15 +476,60 @@ namespace TravelingSalesPerson
 
             int previous = index;
             int current = filledConnections[index].parent1Connection1;
-            endPointsHelper(ref previous, ref current, filledConnections, index, 1);
+            while (true)
+            {
+                if (current == -1 || current == index)
+                {
+                    break;
+                }
 
-            if (previous != index) { endPoint1 = previous; }
+                int tempCurrent;
+                if (filledConnections[current].parent1Connection1 != previous)
+                {
+                    tempCurrent = filledConnections[current].parent1Connection1;
+                }
+                else
+                {
+                    tempCurrent = filledConnections[current].parent1Connection2;
+                }
+
+                previous = current;
+                current = tempCurrent;
+            }
+
+            if (previous != index)
+            {
+                endPoint1 = previous;
+            }
 
             previous = index;
             current = filledConnections[index].parent1Connection2;
-            endPointsHelper(ref previous, ref current, filledConnections, index, 1);
 
-            if (previous != index) { endPoint2 = previous; }
+            while (true)
+            {
+                if (current == -1 || current == index)
+                {
+                    break;
+                }
+
+                int tempCurrent;
+                if (filledConnections[current].parent1Connection1 != previous)
+                {
+                    tempCurrent = filledConnections[current].parent1Connection1;
+                }
+                else
+                {
+                    tempCurrent = filledConnections[current].parent1Connection2;
+                }
+
+                previous = current;
+                current = tempCurrent;
+            }
+
+            if (previous != index)
+            {
+                endPoint2 = previous;
+            }
 
         }
 
@@ -660,9 +710,11 @@ namespace TravelingSalesPerson
         private TSPPath GenerateOffSpringWOC(TSPPath parent1, TSPPath parent2)
         {
             if (parent1.points.Count <= 1)
+            {
                 return new TSPPath(parent1.points.ToList(), CalculateDistance(parent1.points, true));
+            }
 
-            #region Map Connections
+            #region Map connections
 
             SortedList<int, TSPConnectionMap> connections = new SortedList<int, TSPConnectionMap>();
 
@@ -694,9 +746,8 @@ namespace TravelingSalesPerson
                 connection.parent2Connection2 = parent2.points[i].matrixIndex;
             }
 
-            //Set up connection maps for parent2 first and last connections
             TSPConnectionMap parent2FirstConnection = connections[parent2.points[0].matrixIndex];
-            parent2FirstConnection.parent1Connection1 = parent2.points.Last().matrixIndex;
+            parent2FirstConnection.parent2Connection1 = parent2.points.Last().matrixIndex;
             parent2FirstConnection.parent2Connection2 = parent2.points[1].matrixIndex;
 
             TSPConnectionMap parent2LastConnection = connections[parent2.points[parent2.points.Count - 1].matrixIndex];
@@ -705,11 +756,11 @@ namespace TravelingSalesPerson
 
             #endregion
 
-            #region Offspring Connections Initialize
+            List<TSPPoint> offspring = new List<TSPPoint>();
 
-            List<TSPPoint> offSpring = new List<TSPPoint>();
+            #region Initialize offspring connections object
+
             SortedList<int, TSPConnectionMap> filledConnections = new SortedList<int, TSPConnectionMap>();
-            
             for (int i = 0; i < connections.Count; i++)
             {
                 TSPConnectionMap connection = new TSPConnectionMap();
@@ -723,45 +774,51 @@ namespace TravelingSalesPerson
 
             #region Add shared connections
 
-            //Add connections that exist in both parent's solutions
+            // Add connections that exist in both solutions
             for (int i = 0; i < connections.Count; i++)
             {
-                //If the first parent1's connection is the same as one of parent2's connection
-                if (connections[i].parent1Connection1 == connections[i].parent2Connection1 || connections[i].parent1Connection1 == connections[i].parent2Connection2)
+                // If parent1 connection1 is same as one of parent2's connections
+                if (connections[i].parent1Connection1 == connections[i].parent2Connection1
+                    || connections[i].parent1Connection1 == connections[i].parent2Connection2)
                 {
-                    //If the connection already exist, don't do anything
-                    if (filledConnections[i].parent1Connection1 == connections[i].parent1Connection1 || filledConnections[i].parent1Connection2 == connections[i].parent1Connection1) { continue; }
+                    // If connection already exists
+                    if (filledConnections[i].parent1Connection1 == connections[i].parent1Connection1
+                        || filledConnections[i].parent1Connection2 == connections[i].parent1Connection1)
+                    {
+                        continue;
+                    }
 
-                    //If the first connection is still avaliable
+                    // If parent1 connection1 is still available in solution
                     if (filledConnections[i].parent1Connection1 == -1)
                     {
-                        int connection1 = filledConnections[connections[i].parent1Connection1].parent1Connection1;
-                        int connection2 = filledConnections[connections[i].parent1Connection1].parent1Connection2;
+                        // Get connections for shared connection
+                        int cConn1Index = filledConnections[connections[i].parent1Connection1].parent1Connection1;
+                        int cConn2Index = filledConnections[connections[i].parent1Connection1].parent1Connection2;
 
-                        if (connection1 == -1)
+                        if (cConn1Index == -1)
                         {
                             filledConnections[i].parent1Connection1 = connections[i].parent1Connection1;
                             filledConnections[connections[i].parent1Connection1].parent1Connection1 = i;
                         }
-                        else if (connection2 == -1)
+                        else if (cConn2Index == -1)
                         {
                             filledConnections[i].parent1Connection1 = connections[i].parent1Connection1;
                             filledConnections[connections[i].parent1Connection1].parent1Connection2 = i;
                         }
                     }
-
-                    //If the second connection is still avaliable
-                    if (filledConnections[i].parent1Connection2 == -1)
+                    // If parent1 connection2 is still available in solution
+                    else if (filledConnections[i].parent1Connection2 == -1)
                     {
-                        int connection1 = filledConnections[connections[i].parent1Connection1].parent1Connection1;
-                        int connection2 = filledConnections[connections[i].parent1Connection1].parent1Connection2;
+                        // Get connections for shared connection
+                        int cConn1Index = filledConnections[connections[i].parent1Connection1].parent1Connection1;
+                        int cConn2Index = filledConnections[connections[i].parent1Connection1].parent1Connection2;
 
-                        if (connection1 == -1)
+                        if (cConn1Index == -1)
                         {
                             filledConnections[i].parent1Connection2 = connections[i].parent1Connection1;
                             filledConnections[connections[i].parent1Connection1].parent1Connection1 = i;
                         }
-                        else if (connection2 == -1)
+                        else if (cConn2Index == -1)
                         {
                             filledConnections[i].parent1Connection2 = connections[i].parent1Connection1;
                             filledConnections[connections[i].parent1Connection1].parent1Connection2 = i;
@@ -769,44 +826,50 @@ namespace TravelingSalesPerson
                     }
                 }
 
-                //If parent1's second connection is the same of any of parent2's connections
-                if (connections[i].parent1Connection2 == connections[i].parent2Connection1 || connections[i].parent1Connection2 == connections[i].parent2Connection2)
+                // If parent1 connection2 is same as one of parent2's connections
+                if (connections[i].parent1Connection2 == connections[i].parent2Connection1
+                    || connections[i].parent1Connection2 == connections[i].parent2Connection2)
                 {
-                    //If the connection already exist, don't do anything
-                    if (filledConnections[i].parent1Connection1 == connections[i].parent1Connection2 || filledConnections[i].parent1Connection2 == connections[i].parent1Connection2) { continue; }
+                    // If connection already exists
+                    if (filledConnections[i].parent1Connection1 == connections[i].parent1Connection2
+                        || filledConnections[i].parent1Connection2 == connections[i].parent1Connection2)
+                    {
+                        continue;
+                    }
 
-                    //If the first connection is still avaliable
+                    // If parent1 connection1 is still availabile in solution
                     if (filledConnections[i].parent1Connection1 == -1)
                     {
-                        int connection1 = filledConnections[connections[i].parent1Connection2].parent1Connection1;
-                        int connection2 = filledConnections[connections[i].parent1Connection2].parent1Connection2;
+                        // Get connections for shared connection
+                        int cConn1Index = filledConnections[connections[i].parent1Connection2].parent1Connection1;
+                        int cConn2Index = filledConnections[connections[i].parent1Connection2].parent1Connection2;
 
-                        if (connection1 == -1)
+                        if (cConn1Index == -1)
                         {
-                            filledConnections[i].parent1Connection1 = connections[i].parent1Connection1;
+                            filledConnections[i].parent1Connection1 = connections[i].parent1Connection2;
                             filledConnections[connections[i].parent1Connection2].parent1Connection1 = i;
                         }
-                        else if (connection2 == -1)
+                        else if (cConn2Index == -1)
                         {
-                            filledConnections[i].parent1Connection1 = connections[i].parent1Connection1;
+                            filledConnections[i].parent1Connection1 = connections[i].parent1Connection2;
                             filledConnections[connections[i].parent1Connection2].parent1Connection2 = i;
                         }
                     }
-
-                    //If the second connection is still avaliable
-                    if (filledConnections[i].parent1Connection2 == -1)
+                    // If parent1 connection2 is still available in solution
+                    else if (filledConnections[i].parent1Connection2 == -1)
                     {
-                        int connection1 = filledConnections[connections[i].parent1Connection2].parent1Connection1;
-                        int connection2 = filledConnections[connections[i].parent1Connection2].parent1Connection2;
+                        // Get connections for shared connection
+                        int cConn1Index = filledConnections[connections[i].parent1Connection2].parent1Connection1;
+                        int cConn2Index = filledConnections[connections[i].parent1Connection2].parent1Connection2;
 
-                        if (connection1 == -1)
+                        if (cConn1Index == -1)
                         {
                             filledConnections[i].parent1Connection2 = connections[i].parent1Connection2;
                             filledConnections[connections[i].parent1Connection2].parent1Connection1 = i;
                         }
-                        else if (connection2 == -1)
+                        else if (cConn2Index == -1)
                         {
-                            filledConnections[i].parent1Connection2 = connections[i].parent1Connection1;
+                            filledConnections[i].parent1Connection2 = connections[i].parent1Connection2;
                             filledConnections[connections[i].parent1Connection2].parent1Connection2 = i;
                         }
                     }
@@ -815,41 +878,211 @@ namespace TravelingSalesPerson
 
             #endregion
 
-            #region Determine missing connections
+            #region Determine misisng connections
 
             SortedList<int, int> missingConnections = new SortedList<int, int>();
 
-            //Determine the missing connections
+            // Determine missing connections
             for (int i = 0; i < filledConnections.Count; i++)
             {
-                //If a point is missing from both connections
-                if (filledConnections[i].parent1Connection1 == -1 && filledConnections[i].parent1Connection2 == -1) { missingConnections.Add(i, 2); }
-                //If a point is missing from one connection
-                else if (filledConnections[i].parent1Connection1 == -1 || filledConnections[i].parent1Connection2 == -1) { missingConnections.Add(i, 1); } 
+                // If point is missing both connections
+                if (filledConnections[i].parent1Connection1 == -1 && filledConnections[i].parent1Connection2 == -1)
+                {
+                    missingConnections.Add(i, 2);
+                }
+                // If point is missing one connection
+                else if (filledConnections[i].parent1Connection1 == -1 || filledConnections[i].parent1Connection2 == -1)
+                {
+                    missingConnections.Add(i, 1);
+                }
             }
 
             #endregion
 
-            #region Add connections from parent
+            #region Add Connections from parent1
 
             int count = missingConnections.Count;
             for (int i = 0; i < count; i++)
             {
-                if (i >= missingConnections.Count) { break; } //we've exceeded our bounds
+                if (i >= missingConnections.Count)
+                {
+                    break;
+                }
 
                 int missingConnection = missingConnections.ElementAt(i).Key;
-                int endPoint1, endPoint2;
+
+                int endPoint1;
+                int endPoint2;
 
                 DetermineEndPoints(missingConnection, filledConnections, out endPoint1, out endPoint2);
+
                 int random = GetRandomInt(0, 1);
 
                 if (random == 0)
                 {
-                    wocOffSpringMissingConnectionsParent1Helper(ref missingConnection, ref endPoint1, ref endPoint2, ref connections, ref missingConnections, ref filledConnections);
+                    if (missingConnections.ContainsKey(connections[missingConnection].parent1Connection1)
+                        && endPoint1 != connections[missingConnection].parent1Connection1
+                        && endPoint2 != connections[missingConnection].parent1Connection1)
+                    {
+                        if (filledConnections[missingConnection].parent1Connection1 == -1)
+                        {
+                            filledConnections[missingConnection].parent1Connection1 = connections[missingConnection].parent1Connection1;
+                        }
+                        else
+                        {
+                            filledConnections[missingConnection].parent1Connection2 = connections[missingConnection].parent1Connection1;
+                        }
+
+                        if (missingConnections[missingConnection] == 1)
+                        {
+                            missingConnections.Remove(missingConnection);
+                        }
+                        else
+                        {
+                            missingConnections[missingConnection] -= 1;
+                        }
+
+                        if (filledConnections[connections[missingConnection].parent1Connection1].parent1Connection1 == -1)
+                        {
+                            filledConnections[connections[missingConnection].parent1Connection1].parent1Connection1 = missingConnection;
+                        }
+                        else
+                        {
+                            filledConnections[connections[missingConnection].parent1Connection1].parent1Connection2 = missingConnection;
+                        }
+
+                        if (missingConnections[connections[missingConnection].parent1Connection1] == 1)
+                        {
+                            missingConnections.Remove(connections[missingConnection].parent1Connection1);
+                        }
+                        else
+                        {
+                            missingConnections[connections[missingConnection].parent1Connection1] -= 1;
+                        }
+                    }
+                    else if (missingConnections.ContainsKey(connections[missingConnection].parent1Connection2)
+                        && endPoint1 != connections[missingConnection].parent1Connection2
+                        && endPoint2 != connections[missingConnection].parent1Connection2)
+                    {
+                        if (filledConnections[missingConnection].parent1Connection1 == -1)
+                        {
+                            filledConnections[missingConnection].parent1Connection1 = connections[missingConnection].parent1Connection2;
+                        }
+                        else
+                        {
+                            filledConnections[missingConnection].parent1Connection2 = connections[missingConnection].parent1Connection2;
+                        }
+
+                        if (missingConnections[missingConnection] == 1)
+                        {
+                            missingConnections.Remove(missingConnection);
+                        }
+                        else
+                        {
+                            missingConnections[missingConnection] -= 1;
+                        }
+
+                        if (filledConnections[connections[missingConnection].parent1Connection2].parent1Connection1 == -1)
+                        {
+                            filledConnections[connections[missingConnection].parent1Connection2].parent1Connection1 = missingConnection;
+                        }
+                        else
+                        {
+                            filledConnections[connections[missingConnection].parent1Connection2].parent1Connection2 = missingConnection;
+                        }
+
+                        if (missingConnections[connections[missingConnection].parent1Connection2] == 1)
+                        {
+                            missingConnections.Remove(connections[missingConnection].parent1Connection2);
+                        }
+                        else
+                        {
+                            missingConnections[connections[missingConnection].parent1Connection2] -= 1;
+                        }
+                    }
                 }
                 else
                 {
-                    wocOffSpringMissingConnectionsParent2Helper(ref missingConnection, ref endPoint1, ref endPoint2, ref connections, ref missingConnections, ref filledConnections);
+                    if (missingConnections.ContainsKey(connections[missingConnection].parent2Connection1)
+                        && endPoint1 != connections[missingConnection].parent2Connection1
+                        && endPoint2 != connections[missingConnection].parent2Connection1)
+                    {
+                        if (filledConnections[missingConnection].parent1Connection1 == -1)
+                        {
+                            filledConnections[missingConnection].parent1Connection1 = connections[missingConnection].parent2Connection1;
+                        }
+                        else
+                        {
+                            filledConnections[missingConnection].parent1Connection2 = connections[missingConnection].parent2Connection1;
+                        }
+
+                        if (missingConnections[missingConnection] == 1)
+                        {
+                            missingConnections.Remove(missingConnection);
+                        }
+                        else
+                        {
+                            missingConnections[missingConnection] -= 1;
+                        }
+
+                        if (filledConnections[connections[missingConnection].parent2Connection1].parent1Connection1 == -1)
+                        {
+                            filledConnections[connections[missingConnection].parent2Connection1].parent1Connection1 = missingConnection;
+                        }
+                        else
+                        {
+                            filledConnections[connections[missingConnection].parent2Connection1].parent1Connection2 = missingConnection;
+                        }
+
+                        if (missingConnections[connections[missingConnection].parent2Connection1] == 1)
+                        {
+                            missingConnections.Remove(connections[missingConnection].parent2Connection1);
+                        }
+                        else
+                        {
+                            missingConnections[connections[missingConnection].parent2Connection1] -= 1;
+                        }
+                    }
+                    else if (missingConnections.ContainsKey(connections[missingConnection].parent2Connection2)
+                        && endPoint1 != connections[missingConnection].parent2Connection2
+                        && endPoint2 != connections[missingConnection].parent2Connection2)
+                    {
+                        if (filledConnections[missingConnection].parent1Connection1 == -1)
+                        {
+                            filledConnections[missingConnection].parent1Connection1 = connections[missingConnection].parent2Connection2;
+                        }
+                        else
+                        {
+                            filledConnections[missingConnection].parent1Connection2 = connections[missingConnection].parent2Connection2;
+                        }
+
+                        if (missingConnections[missingConnection] == 1)
+                        {
+                            missingConnections.Remove(missingConnection);
+                        }
+                        else
+                        {
+                            missingConnections[missingConnection] -= 1;
+                        }
+
+                        if (filledConnections[connections[missingConnection].parent2Connection2].parent1Connection1 == -1)
+                        {
+                            filledConnections[connections[missingConnection].parent2Connection2].parent1Connection1 = missingConnection;
+                        }
+                        else
+                        {
+                            filledConnections[connections[missingConnection].parent2Connection2].parent1Connection2 = missingConnection;
+                        }
+
+                        if (missingConnections[connections[missingConnection].parent2Connection2] == 1)
+                        {
+                            missingConnections.Remove(connections[missingConnection].parent2Connection2);
+                        }
+                        else
+                        {
+                            missingConnections[connections[missingConnection].parent2Connection2] -= 1;
+                        }
+                    }
                 }
             }
 
@@ -859,13 +1092,17 @@ namespace TravelingSalesPerson
 
             while (missingConnections.Count > 0)
             {
-                int index = missingConnections.First().Key;
-                int endPoint1, endPoint2;
+                int matrixIndex = missingConnections.First().Key;
+
+                int endPoint1;
+                int endPoint2;
+
+                DetermineEndPoints(matrixIndex, filledConnections, out endPoint1, out endPoint2);
+
                 int pendingRemoval = -1;
 
-                DetermineEndPoints(index, filledConnections, out endPoint1, out endPoint2);
-
                 List<int> remainingKeys = new List<int>();
+
                 foreach (KeyValuePair<int, int> pair in missingConnections)
                 {
                     remainingKeys.Add(pair.Key);
@@ -875,13 +1112,25 @@ namespace TravelingSalesPerson
 
                 foreach (int key in remainingKeys)
                 {
-                    if (key != index && key != endPoint1 && key != endPoint2)
+                    if (key != matrixIndex && key != endPoint1 && key != endPoint2)
                     {
-                        if (filledConnections[index].parent1Connection1 == -1) { filledConnections[index].parent1Connection1 = key; }
-                        else { filledConnections[index].parent1Connection2 = key; }
+                        if (filledConnections[matrixIndex].parent1Connection1 == -1)
+                        {
+                            filledConnections[matrixIndex].parent1Connection1 = key;
+                        }
+                        else
+                        {
+                            filledConnections[matrixIndex].parent1Connection2 = key;
+                        }
 
-                        if (filledConnections[key].parent1Connection1 == -1) { filledConnections[key].parent1Connection1 = index; }
-                        else { filledConnections[key].parent1Connection2 = index; }
+                        if (filledConnections[key].parent1Connection1 == -1)
+                        {
+                            filledConnections[key].parent1Connection1 = matrixIndex;
+                        }
+                        else
+                        {
+                            filledConnections[key].parent1Connection2 = matrixIndex;
+                        }
 
                         pendingRemoval = key;
                         break;
@@ -890,20 +1139,46 @@ namespace TravelingSalesPerson
 
                 if (pendingRemoval > 0)
                 {
-                    if (missingConnections[index] == 1) { missingConnections.Remove(index); }
-                    else { missingConnections[index]--; }
-                    if (missingConnections[pendingRemoval] == 1) { missingConnections.Remove(pendingRemoval); }
-                    else { missingConnections[pendingRemoval]--; }
+                    if (missingConnections[matrixIndex] == 1)
+                    {
+                        missingConnections.Remove(matrixIndex);
+                    }
+                    else
+                    {
+                        missingConnections[matrixIndex] -= 1;
+                    }
+
+                    if (missingConnections[pendingRemoval] == 1)
+                    {
+                        missingConnections.Remove(pendingRemoval);
+                    }
+                    else
+                    {
+                        missingConnections[pendingRemoval] -= 1;
+                    }
                 }
                 else if (missingConnections.Count == 2)
                 {
                     int first = missingConnections.First().Key;
                     int last = missingConnections.Last().Key;
 
-                    if (filledConnections[first].parent1Connection1 == -1) { filledConnections[first].parent1Connection1 = last; }
-                    else { filledConnections[first].parent1Connection2 = last; }
-                    if (filledConnections[last].parent1Connection1 == -1) { filledConnections[last].parent1Connection1 = first; }
-                    else { filledConnections[last].parent1Connection2 = first; }
+                    if (filledConnections[first].parent1Connection1 == -1)
+                    {
+                        filledConnections[first].parent1Connection1 = last;
+                    }
+                    else
+                    {
+                        filledConnections[first].parent1Connection2 = last;
+                    }
+
+                    if (filledConnections[last].parent1Connection1 == -1)
+                    {
+                        filledConnections[last].parent1Connection1 = first;
+                    }
+                    else
+                    {
+                        filledConnections[last].parent1Connection2 = first;
+                    }
 
                     missingConnections.Clear();
                 }
@@ -915,25 +1190,28 @@ namespace TravelingSalesPerson
 
             List<TSPPoint> offspringPoints = new List<TSPPoint>();
 
-            int previousIndex = filledConnections.First().Key;
-            int startIndex = previousIndex;
+            int previousMatrixIndex = filledConnections.First().Key;
+            int startIndex = previousMatrixIndex;
             offspringPoints.Add(parent1.points[filledConnections.First().Value.parent1Index]);
-            int currentIndex = filledConnections.First().Value.parent1Connection1;
 
-            while (currentIndex != startIndex)
+            int currentMatrixIndex = filledConnections.First().Value.parent1Connection1;
+
+            while (currentMatrixIndex != startIndex)
             {
-                offspringPoints.Add(parent1.points[filledConnections[currentIndex].parent1Index]);
+                offspringPoints.Add(parent1.points[filledConnections[currentMatrixIndex].parent1Index]);
 
-                int tempIndex = currentIndex;
+                int tempCurrentMatrixIndex = currentMatrixIndex;
 
-                if (filledConnections[currentIndex].parent1Connection1 == previousIndex)
+                if (filledConnections[currentMatrixIndex].parent1Connection1 == previousMatrixIndex)
                 {
-                    currentIndex = filledConnections[currentIndex].parent1Connection2;
+                    currentMatrixIndex = filledConnections[currentMatrixIndex].parent1Connection2;
                 }
                 else
                 {
-                    currentIndex = filledConnections[currentIndex].parent1Connection2;
+                    currentMatrixIndex = filledConnections[currentMatrixIndex].parent1Connection1;
                 }
+
+                previousMatrixIndex = tempCurrentMatrixIndex;
             }
 
             #endregion
@@ -1090,10 +1368,10 @@ namespace TravelingSalesPerson
             return population;
         }
 
-        public double GeneticAlgorithm(out List<TSPPoint> shortestPoints, int crossoverPoint, int mutationProbability, int populationSize, int iterations)
+        public double GeneticAlgorithm(out List<TSPPoint> shortestPoints, int mutationProbability, int populationSize, int iterations)
         {
             //Generate initial population
-            List<TSPPath> initialPopulation = GeneratePopulation(populationSize);
+            List<TSPPath> initialPopulation = GeneratePopulation(populationSize);            
 
             //Sort chromosomes by fitness
             initialPopulation.Sort();
@@ -1121,9 +1399,9 @@ namespace TravelingSalesPerson
             return initialPopulation[0].Fitness();
         }
 
-        public double GeneticAlgorithmWOC(out List<TSPPoint> shortestPoints, int crossoverPoint, int mutationProbability, int populationSize, int iterations)
+        public double GeneticAlgorithmWOC(out List<TSPPoint> shortestPoints, int mutationProbability, int populationSize, int iterations)
         {
-            Debug.WriteLine("In GeneticAlgorithmWOC");
+            //Debug.WriteLine("In GeneticAlgorithmWOC");
             List<TSPPath> initialPopulation = GeneratePopulation(populationSize);
 
             initialPopulation.Sort();

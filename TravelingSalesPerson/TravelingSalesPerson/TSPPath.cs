@@ -8,7 +8,7 @@ namespace TravelingSalesPerson
 {
     class TSPPath : IComparable<TSPPath>
     {
-        private double distance;
+        public double distance;
         public TimeSpan elapsedTime;
         public List<TSPPoint> points;
 

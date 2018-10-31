@@ -39,7 +39,7 @@ namespace TravelingSalesPerson
 
         private void solveButton_Click(object sender, RoutedEventArgs e)
         {
-            this.mainWindow.solveGeneticAlgorithm(Convert.ToInt32(crossOverTextBox.Text), Convert.ToInt32(mutationTextBox.Text), Convert.ToInt32(initialPopulationTextBox.Text), Convert.ToInt32(iterationsTextBox.Text), Convert.ToInt32(trialsTextBox.Text), Convert.ToBoolean(this.wocChecked.IsChecked));
+            this.mainWindow.solveGeneticAlgorithm(Convert.ToInt32(mutationTextBox.Text), Convert.ToInt32(initialPopulationTextBox.Text), Convert.ToInt32(iterationsTextBox.Text), Convert.ToInt32(trialsTextBox.Text), Convert.ToBoolean(this.wocChecked.IsChecked));
             this.Hide();
         }
 
