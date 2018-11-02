@@ -476,26 +476,8 @@ namespace TravelingSalesPerson
 
             int previous = index;
             int current = filledConnections[index].parent1Connection1;
-            while (true)
-            {
-                if (current == -1 || current == index)
-                {
-                    break;
-                }
 
-                int tempCurrent;
-                if (filledConnections[current].parent1Connection1 != previous)
-                {
-                    tempCurrent = filledConnections[current].parent1Connection1;
-                }
-                else
-                {
-                    tempCurrent = filledConnections[current].parent1Connection2;
-                }
-
-                previous = current;
-                current = tempCurrent;
-            }
+            endPointsHelper(ref previous, ref current, filledConnections, index);
 
             if (previous != index)
             {
@@ -505,6 +487,17 @@ namespace TravelingSalesPerson
             previous = index;
             current = filledConnections[index].parent1Connection2;
 
+            endPointsHelper(ref previous, ref current, filledConnections, index);
+
+            if (previous != index)
+            {
+                endPoint2 = previous;
+            }
+
+        }
+
+        private void endPointsHelper(ref int previous, ref int current, SortedList<int, TSPConnectionMap> filledConnections, int index)
+        {
             while (true)
             {
                 if (current == -1 || current == index)
@@ -524,39 +517,6 @@ namespace TravelingSalesPerson
 
                 previous = current;
                 current = tempCurrent;
-            }
-
-            if (previous != index)
-            {
-                endPoint2 = previous;
-            }
-
-        }
-
-        private void endPointsHelper(ref int previous, ref int current, SortedList<int, TSPConnectionMap> filledConnections, int index, int parent)
-        {
-            while (true)
-            {
-                if (current == -1 || current == index) { break; }
-
-                int temp;
-                int parentConnection1, parentConnection2;
-                if (parent == 1)
-                {
-                    parentConnection1 = filledConnections[current].parent1Connection1;
-                    parentConnection2 = filledConnections[current].parent1Connection2;
-                }
-                else
-                {
-                    parentConnection1 = filledConnections[current].parent2Connection1;
-                    parentConnection2 = filledConnections[current].parent2Connection2;
-                }
-
-                if (parentConnection1 != previous) { temp = parentConnection1; }
-                else { temp = parentConnection2; }
-
-                previous = current;
-                current = temp;
             }
         }
 
@@ -707,6 +667,8 @@ namespace TravelingSalesPerson
             return new TSPPath(offspringPoints, CalculateDistance(offspringPoints, true));
         }
 
+        #region WOCOffSpring
+
         private TSPPath GenerateOffSpringWOC(TSPPath parent1, TSPPath parent2)
         {
             if (parent1.points.Count <= 1)
@@ -714,10 +676,25 @@ namespace TravelingSalesPerson
                 return new TSPPath(parent1.points.ToList(), CalculateDistance(parent1.points, true));
             }
 
-            #region Map connections
-
+            List<TSPPoint> offspring = new List<TSPPoint>();
             SortedList<int, TSPConnectionMap> connections = new SortedList<int, TSPConnectionMap>();
+            SortedList<int, TSPConnectionMap> filledConnections = new SortedList<int, TSPConnectionMap>();
+            SortedList<int, int> missingConnections = new SortedList<int, int>();
+            List<TSPPoint> offspringPoints = new List<TSPPoint>();
 
+            MapConnections(ref parent1, ref parent2, ref connections);
+            InitializeOffSpring(ref connections, ref filledConnections);
+            AddSharedConnections(ref connections, ref filledConnections);
+            DetermineMissingConnections(ref filledConnections, ref missingConnections);
+            AddConnectionsParent(ref connections, ref filledConnections, ref missingConnections);
+            AddRemainingConnections(ref filledConnections, ref missingConnections);
+            GenerateOffSpringList(ref parent1, ref parent2, ref filledConnections, ref offspringPoints);
+
+            return new TSPPath(offspringPoints.ToList(), CalculateDistance(offspringPoints, true));
+        }
+
+        private void MapConnections(ref TSPPath parent1, ref TSPPath parent2, ref SortedList<int, TSPConnectionMap> connections)
+        {
             for (int i = 2; i < parent1.points.Count; i++)
             {
                 TSPConnectionMap connection = new TSPConnectionMap();
@@ -753,14 +730,10 @@ namespace TravelingSalesPerson
             TSPConnectionMap parent2LastConnection = connections[parent2.points[parent2.points.Count - 1].matrixIndex];
             parent2LastConnection.parent2Connection1 = parent2.points[parent2.points.Count - 2].matrixIndex;
             parent2LastConnection.parent2Connection2 = parent2.points[0].matrixIndex;
+        }
 
-            #endregion
-
-            List<TSPPoint> offspring = new List<TSPPoint>();
-
-            #region Initialize offspring connections object
-
-            SortedList<int, TSPConnectionMap> filledConnections = new SortedList<int, TSPConnectionMap>();
+        private void InitializeOffSpring(ref SortedList<int, TSPConnectionMap> connections, ref SortedList<int, TSPConnectionMap> filledConnections)
+        {            
             for (int i = 0; i < connections.Count; i++)
             {
                 TSPConnectionMap connection = new TSPConnectionMap();
@@ -769,11 +742,10 @@ namespace TravelingSalesPerson
                 connection.parent1Connection2 = -1;
                 filledConnections.Add(i, connection);
             }
+        }
 
-            #endregion
-
-            #region Add shared connections
-
+        private void AddSharedConnections(ref SortedList<int, TSPConnectionMap> connections, ref SortedList<int, TSPConnectionMap> filledConnections)
+        {
             // Add connections that exist in both solutions
             for (int i = 0; i < connections.Count; i++)
             {
@@ -875,13 +847,10 @@ namespace TravelingSalesPerson
                     }
                 }
             }
+        }
 
-            #endregion
-
-            #region Determine misisng connections
-
-            SortedList<int, int> missingConnections = new SortedList<int, int>();
-
+        private void DetermineMissingConnections(ref SortedList<int, TSPConnectionMap> filledConnections, ref SortedList<int, int> missingConnections)
+        {
             // Determine missing connections
             for (int i = 0; i < filledConnections.Count; i++)
             {
@@ -896,11 +865,10 @@ namespace TravelingSalesPerson
                     missingConnections.Add(i, 1);
                 }
             }
+        }
 
-            #endregion
-
-            #region Add Connections from parent1
-
+        private void AddConnectionsParent(ref SortedList<int, TSPConnectionMap> connections, ref SortedList<int, TSPConnectionMap> filledConnections, ref SortedList<int, int> missingConnections)
+        {
             int count = missingConnections.Count;
             for (int i = 0; i < count; i++)
             {
@@ -1085,9 +1053,10 @@ namespace TravelingSalesPerson
                     }
                 }
             }
+        }
 
-            #endregion
-
+        private void AddRemainingConnections(ref SortedList<int, TSPConnectionMap> filledConnections, ref SortedList<int, int> missingConnections)
+        {
             #region Add remaining connections
 
             while (missingConnections.Count > 0)
@@ -1185,11 +1154,10 @@ namespace TravelingSalesPerson
             }
 
             #endregion
+        }
 
-            #region Generate offspring points list
-
-            List<TSPPoint> offspringPoints = new List<TSPPoint>();
-
+        private void GenerateOffSpringList(ref TSPPath parent1, ref TSPPath parent2, ref SortedList<int, TSPConnectionMap> filledConnections, ref List<TSPPoint> offspringPoints)
+        {
             int previousMatrixIndex = filledConnections.First().Key;
             int startIndex = previousMatrixIndex;
             offspringPoints.Add(parent1.points[filledConnections.First().Value.parent1Index]);
@@ -1213,137 +1181,9 @@ namespace TravelingSalesPerson
 
                 previousMatrixIndex = tempCurrentMatrixIndex;
             }
-
-            #endregion
-
-            return new TSPPath(offspringPoints.ToList(), CalculateDistance(offspringPoints, true));
         }
 
-        private void wocOffSpringMissingConnectionsParent1Helper(ref int missingConnection, ref int endPoint1, ref int endPoint2, ref SortedList<int, TSPConnectionMap> connections, ref SortedList<int, int> missingConnections, ref SortedList<int, TSPConnectionMap> filledConnections)
-        {
-            if (missingConnections.ContainsKey(connections[missingConnection].parent1Connection1) && endPoint1 != connections[missingConnection].parent1Connection1 && endPoint2 != connections[missingConnection].parent1Connection1)
-            {
-                if (filledConnections[missingConnection].parent1Connection1 == -1)
-                {
-                    filledConnections[missingConnection].parent1Connection1 = connections[missingConnection].parent1Connection1;
-                }
-                else
-                {
-                    filledConnections[missingConnection].parent1Connection2 = connections[missingConnection].parent1Connection1;
-                }
-
-                if (missingConnections[missingConnection] == 1) { missingConnections.Remove(missingConnection); }
-                else { missingConnections[missingConnection] -= 1; }
-
-                if (filledConnections[connections[missingConnection].parent1Connection1].parent1Connection1 == -1)
-                {
-                    filledConnections[connections[missingConnection].parent1Connection1].parent1Connection1 = missingConnection;
-                }
-                else
-                {
-                    filledConnections[connections[missingConnection].parent1Connection1].parent1Connection2 = missingConnection;
-                }
-
-                if (missingConnections[connections[missingConnection].parent1Connection1] == 1)
-                {
-                    missingConnections.Remove(connections[missingConnection].parent1Connection1);
-                }
-                else { missingConnections[connections[missingConnection].parent1Connection1] -= 1; }
-            }
-
-            else if (missingConnections.ContainsKey(connections[missingConnection].parent1Connection2) && endPoint1 != connections[missingConnection].parent1Connection2 && endPoint2 != connections[missingConnection].parent1Connection2)
-            {
-                if (filledConnections[missingConnection].parent1Connection1 == -1)
-                {
-                    filledConnections[missingConnection].parent1Connection1 = connections[missingConnection].parent1Connection2;
-                }
-                else
-                {
-                    filledConnections[missingConnection].parent1Connection2 = connections[missingConnection].parent1Connection2;
-                }
-
-                if (missingConnections[missingConnection] == 1) { missingConnections.Remove(missingConnection); }
-                else { missingConnections[missingConnection] -= 1; }
-
-                if (filledConnections[connections[missingConnection].parent1Connection2].parent1Connection1 == -1)
-                {
-                    filledConnections[connections[missingConnection].parent1Connection2].parent1Connection1 = missingConnection;
-                }
-                else
-                {
-                    filledConnections[connections[missingConnection].parent1Connection2].parent1Connection2 = missingConnection;
-                }
-
-                if (missingConnections[connections[missingConnection].parent1Connection1] == 1)
-                {
-                    missingConnections.Remove(connections[missingConnection].parent1Connection2);
-                }
-                else { missingConnections[connections[missingConnection].parent1Connection2] -= 1; }
-            }
-        }
-
-        private void wocOffSpringMissingConnectionsParent2Helper(ref int missingConnection, ref int endPoint1, ref int endPoint2, ref SortedList<int, TSPConnectionMap> connections, ref SortedList<int, int> missingConnections, ref SortedList<int, TSPConnectionMap> filledConnections)
-        {
-            if (missingConnections.ContainsKey(connections[missingConnection].parent2Connection1) && endPoint1 != connections[missingConnection].parent2Connection1 && endPoint2 != connections[missingConnection].parent2Connection1)
-            {
-                if (filledConnections[missingConnection].parent1Connection1 == -1)
-                {
-                    filledConnections[missingConnection].parent1Connection1 = connections[missingConnection].parent2Connection1;
-                }
-                else
-                {
-                    filledConnections[missingConnection].parent1Connection2 = connections[missingConnection].parent2Connection1;
-                }
-
-                if (missingConnections[missingConnection] == 1) { missingConnections.Remove(missingConnection); }
-                else { missingConnections[missingConnection] -= 1; }
-
-                if (filledConnections[connections[missingConnection].parent2Connection1].parent1Connection1 == -1)
-                {
-                    filledConnections[connections[missingConnection].parent2Connection1].parent1Connection1 = missingConnection;
-                }
-                else
-                {
-                    filledConnections[connections[missingConnection].parent2Connection1].parent1Connection2 = missingConnection;
-                }
-
-                if (missingConnections[connections[missingConnection].parent2Connection1] == 1)
-                {
-                    missingConnections.Remove(connections[missingConnection].parent2Connection1);
-                }
-                else { missingConnections[connections[missingConnection].parent2Connection1] -= 1; }
-            }
-
-            else if (missingConnections.ContainsKey(connections[missingConnection].parent2Connection2) && endPoint1 != connections[missingConnection].parent2Connection2 && endPoint2 != connections[missingConnection].parent2Connection2)
-            {
-                if (filledConnections[missingConnection].parent1Connection1 == -1)
-                {
-                    filledConnections[missingConnection].parent1Connection1 = connections[missingConnection].parent2Connection2;
-                }
-                else
-                {
-                    filledConnections[missingConnection].parent1Connection2 = connections[missingConnection].parent2Connection2;
-                }
-
-                if (missingConnections[missingConnection] == 1) { missingConnections.Remove(missingConnection); }
-                else { missingConnections[missingConnection] -= 1; }
-
-                if (filledConnections[connections[missingConnection].parent2Connection2].parent1Connection1 == -1)
-                {
-                    filledConnections[connections[missingConnection].parent2Connection2].parent1Connection1 = missingConnection;
-                }
-                else
-                {
-                    filledConnections[connections[missingConnection].parent2Connection2].parent1Connection2 = missingConnection;
-                }
-
-                if (missingConnections[connections[missingConnection].parent2Connection1] == 1)
-                {
-                    missingConnections.Remove(connections[missingConnection].parent2Connection2);
-                }
-                else { missingConnections[connections[missingConnection].parent2Connection2] -= 1; }
-            }
-        }
+        #endregion
 
         private List<TSPPath> GeneratePopulation(int initialPopulation)
         {
